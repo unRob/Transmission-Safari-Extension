@@ -4,6 +4,8 @@
 <dict>
 	<key>Author</key>
 	<string>Partido Surrealista Mexicano</string>
+	<key>Builder Version</key>
+	<string>7534.57.2</string>
 	<key>CFBundleDisplayName</key>
 	<string>Add to Transmission</string>
 	<key>CFBundleIdentifier</key>
@@ -11,9 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.4a</string>
+	<string>0.5</string>
 	<key>CFBundleVersion</key>
-	<string>.4</string>
+	<string>.5</string>
 	<key>Chrome</key>
 	<dict>
 		<key>Global Page</key>

@@ -6,55 +6,73 @@ Based on a work at www.transmissionbt.com.
 http://creativecommons.org/licenses/by-nc-sa/3.0/
 */
 
-var base = safari.extension.settings.url;
-var ssid = null;
-var rpcea = null;
+var Piroteca = {};
 
-safari.extension.settings.addEventListener("change", function(event){
-	if(event.key == 'url'){
-		base = event.newValue;
-		safari.extension.settings.url = base;
-		console.log('Changing base to: '+base);
+safari.application.addEventListener("command", function(evt){
+	if(evt.command === 'piroteca'){
+		new Piroteca.request(evt.userInfo);
 	}
 }, false);
 
-function cl(cosa){
-	console.log(cosa);
-	//safari.application.activeBrowserWindow.activeTab.page.dispatchMessage('message', cosa);
-}
-
-
-function add(torrent){
-	var xhr = new XMLHttpRequest();
-	xhr.onreadystatechange = function(){
-		rpcea(xhr, torrent);
-	};
-	xhr.open('POST', base+'/transmission/rpc');
-	xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
-	xhr.setRequestHeader("X-Transmission-Session-Id", ssid);
-	xhr.send('{"method":"torrent-add","arguments":{"paused":false,"filename":"'+torrent.url+'"}}');
-}
-
-rpcea = function(myxhr, torrent){
-	if(myxhr.readyState == 4){
-		if(myxhr.status == 200){
-			safari.application.activeBrowserWindow.activeTab.page.dispatchMessage('pirotecado', 'true');
-		} else if( myxhr.status == 409 ) {
-			ssid = myxhr.getResponseHeader('X-Transmission-Session-Id');
-			add(torrent);
-		}
+safari.extension.settings.addEventListener("change", function(event){
+	switch (event.key) {
+		case 'url':
+			Piroteca.base = event.newValue;
+		break;
+		case 'ssid':
+			console.log('Cambio el ssid a '+event.newValue);
+			Piroteca.ssid = event.newValue;
+		break;
+		default:
+			console.log(event);
+		break;
 	}
-};
+}, false);
 
-safari.application.addEventListener("command", function(event){
-	if(event.command == 'piroteca'){
-		add(event.userInfo);
-	}
-} , false);
 
 safari.application.addEventListener("contextmenu", function(event){
-	if( typeof event.userInfo !== 'undefined'){
+	if( event.userInfo ){
 		event.contextMenu.appendContextMenuItem('piroteca', 'Add Torrent to Transmission');
 	}
 	
 }, false);
+
+
+Piroteca.request = function(url) {
+	var xhr = new XMLHttpRequest();
+	var data = {
+		method: 'torrent-add',
+		"arguments": { paused: false, filename: url }
+	};
+	xhr.onreadystatechange = function(){
+		if(xhr.readyState === 4) {
+			if (xhr.status === 200) {
+				var btih = url.match(/btih:([^&]+)/)[1];
+				safari.application.activeBrowserWindow.activeTab.page.dispatchMessage('pirotecado', btih);
+			} else if(xhr.status === 409) {
+				Piroteca.ssid = xhr.getResponseHeader('X-Transmission-Session-Id');
+				safari.extension.settings.ssid = Piroteca.ssid;
+				Piroteca.request(url);
+			}
+		}
+		
+	};
+	try {
+		xhr.open('post', Piroteca.base+'/transmission/rpc');
+		xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
+		xhr.setRequestHeader("X-Transmission-Session-Id", Piroteca.ssid);
+		xhr.send(JSON.stringify(data));
+	} catch (ex) {
+		console.error(ex);
+	}
+	
+};
+
+//init!
+try {
+	Piroteca.base = safari.extension.settings.url;
+	Piroteca.ssid = safari.extension.settings.ssid;
+} catch (ex) {
+	console.error(ex);
+	console.log(safari);
+}
